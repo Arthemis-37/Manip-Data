@@ -6,9 +6,12 @@ st.set_page_config(page_title="Analyse Énergie Mondiale", layout="wide")
 
 @st.cache_data
 def load_data():
+    url = "https://raw.githubusercontent.com/Arthemis-37/Manip-Data/refs/heads/main/World%20Energy%20Consumption.csv"
+    try:
+        df = pd.read_csv(url)
+    except:
+        df = pd.read_csv("Manip-Data\\World Energy Consumption.csv")
 
-    df = pd.read_csv("world_energy_consumption.csv")
-    
     df_clean = df.dropna(subset=['iso_code'])
     
     def solar_intensity(val):
