@@ -10,7 +10,7 @@ def load_data():
     try:
         df = pd.read_csv(url)
     except:
-        df = pd.read_csv("World Energy Consumption.csv")
+        df = pd.read_csv("Manip-Data\world_energy_consumption.csv")
 
     df_clean = df.dropna(subset=['iso_code']).copy()
     
