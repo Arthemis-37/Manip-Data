@@ -1,16 +1,18 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from pathlib import Path
 
 st.set_page_config(page_title="Tableau de bord énergétique mondial", layout="wide")
 
 @st.cache_data
 def load_data():
     url = "https://raw.githubusercontent.com/Arthemis-37/Manip-Data/refs/heads/main/World%20Energy%20Consumption.csv"
+    local_csv = Path(__file__).resolve().parent / "world_energy_consumption.csv"
     try:
         df = pd.read_csv(url)
-    except:
-        df = pd.read_csv("Manip-Data\world_energy_consumption.csv")
+    except Exception:
+        df = pd.read_csv(local_csv)
 
     df_clean = df.dropna(subset=['iso_code']).copy()
     
