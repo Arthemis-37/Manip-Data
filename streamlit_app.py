@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+
+pd.set_option('future.no_silent_downcasting', True)
 from pathlib import Path
 
 st.set_page_config(page_title="Tableau de bord énergétique mondial", layout="wide")
@@ -11,12 +13,14 @@ def load_data():
     local_csv = Path(__file__).resolve().parent / "world_energy_consumption.csv"
     try:
         df = pd.read_csv(url)
-    except Exception:
+    except Exception as e:
+        st.warning(f"Chargement depuis le fichier local (URL inaccessible : {e})")
         df = pd.read_csv(local_csv)
 
     df_clean = df.dropna(subset=['iso_code']).copy()
     
-    cols_to_fix = ['solar_consumption', 'renewables_consumption', 'primary_energy_consumption', 'co2']
+    cols_to_fix = ['solar_consumption', 'wind_consumption', 'nuclear_consumption',
+                   'renewables_consumption', 'primary_energy_consumption', 'greenhouse_gas_emissions']
     for col in cols_to_fix:
         if col in df_clean.columns:
             df_clean[col] = df_clean[col].fillna(0)
@@ -29,7 +33,9 @@ def load_data():
     df_clean['solar_status'] = df_clean['solar_consumption'].apply(solar_intensity)
 
     df_clean = df_clean.assign(
-        renewables_pct = lambda x: (x['renewables_consumption'] / x['primary_energy_consumption'] * 100).fillna(0)
+        renewables_pct = lambda x: (
+            x['renewables_consumption'] / x['primary_energy_consumption'].replace(0, pd.NA) * 100
+        ).fillna(0)
     )
     
     return df_clean
@@ -65,10 +71,12 @@ total_cons = df_filtered['primary_energy_consumption'].sum()
 avg_co2 = df_filtered['greenhouse_gas_emissions'].mean()
 std_renew = df_filtered['renewables_consumption'].std()
 
+avg_renew_pct = df_filtered['renewables_pct'].mean()
+
 col1, col2, col3 = st.columns(3)
 col1.metric("Consommation totale (TWh)", f"{total_cons:,.2f}")
-col2.metric("Émissions moyennes de CO₂ (Mt)", f"{avg_co2:.2f}")
-col3.metric("Écart-type des renouvelables", f"{std_renew:.2f}")
+col2.metric("Émissions moyennes de GES (Mt)", f"{avg_co2:.2f}" if pd.notna(avg_co2) else "N/A")
+col3.metric("Part moyenne des renouvelables", f"{avg_renew_pct:.1f}%" if pd.notna(avg_renew_pct) else "N/A")
 
 st.divider()
 
@@ -87,7 +95,7 @@ with col_left:
                       labels={'value': 'Consommation (TWh)', 'year': 'Année', 'variable': 'Source d’énergie'},
                       title="Consommation d’énergie par source")
     fig_line.for_each_trace(lambda trace: trace.update(name=energy_labels.get(trace.name, trace.name)))
-    st.plotly_chart(fig_line, use_container_width=True)
+    st.plotly_chart(fig_line, width='stretch')
 
 with col_right:
     st.write("### Répartition des émissions de CO₂")
@@ -100,17 +108,19 @@ with col_right:
             labels={'greenhouse_gas_emissions': 'Émissions de CO₂ (Mt)', 'count': 'Nombre de relevés'},
             title=f"Distribution des émissions — {selected_country}"
         )
-        st.plotly_chart(fig_hist, use_container_width=True)
+        st.plotly_chart(fig_hist, width='stretch')
     else:
         st.warning("Données insuffisantes pour afficher l’histogramme du CO₂.")
 
 st.write("### Relation entre PIB et consommation d’énergie")
-# On supprime les lignes où les émissions de gaz à effet de serre sont manquantes pour éviter l'erreur de Plotly
 df_scatter = df_filtered.dropna(subset=['greenhouse_gas_emissions'])
 
 if not df_scatter.empty:
+    df_scatter = df_scatter.copy()
+    df_scatter["renewables_pct"] = df_scatter["renewables_pct"].astype(float).round(1)
     fig_scatter = px.scatter(df_scatter, x='gdp', y='primary_energy_consumption', 
                              size='greenhouse_gas_emissions', color='renewables_pct',
+                             color_continuous_scale='Teal',
                              hover_name='year',
                              labels={
                                  'gdp': 'PIB',
@@ -120,12 +130,26 @@ if not df_scatter.empty:
                                  'year': 'Année'
                              },
                              title="PIB et consommation d’énergie (taille = émissions de GES)")
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    st.plotly_chart(fig_scatter, width='stretch')
 else:
     st.warning("Données insuffisantes pour afficher le graphique de corrélation.")
 
 st.write("### Répartition du statut solaire")
-st.table(df_filtered['solar_status'].value_counts())
+solar_counts = df_filtered["solar_status"].value_counts().reset_index()
+solar_counts.columns = ["Statut", "Nombre d annees"]
+fig_pie = px.pie(
+    solar_counts,
+    names="Statut",
+    values="Nombre d annees",
+    color="Statut",
+    color_discrete_map={
+        "Producteur Majeur": "#0d6e6e",
+        "Producteur Mineur": "#4db8b8",
+        "Non producteur": "#d3d3d3"
+    }
+)
+fig_pie.update_traces(textposition="inside", textinfo="percent+label")
+st.plotly_chart(fig_pie, width="stretch")
 
 if st.checkbox("Afficher les données brutes"):
     st.dataframe(df_filtered)
