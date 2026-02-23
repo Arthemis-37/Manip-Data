@@ -87,7 +87,7 @@ with col_left:
                       labels={'value': 'Consommation (TWh)', 'year': 'Année', 'variable': 'Source d’énergie'},
                       title="Consommation d’énergie par source")
     fig_line.for_each_trace(lambda trace: trace.update(name=energy_labels.get(trace.name, trace.name)))
-    st.plotly_chart(fig_line, use_container_width=True)
+    st.plotly_chart(fig_line, width='stretch')
 
 with col_right:
     st.write("### Répartition des émissions de CO₂")
@@ -100,7 +100,7 @@ with col_right:
             labels={'greenhouse_gas_emissions': 'Émissions de CO₂ (Mt)', 'count': 'Nombre de relevés'},
             title=f"Distribution des émissions — {selected_country}"
         )
-        st.plotly_chart(fig_hist, use_container_width=True)
+        st.plotly_chart(fig_hist, width='stretch')
     else:
         st.warning("Données insuffisantes pour afficher l’histogramme du CO₂.")
 
@@ -120,7 +120,7 @@ if not df_scatter.empty:
                                  'year': 'Année'
                              },
                              title="PIB et consommation d’énergie (taille = émissions de GES)")
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    st.plotly_chart(fig_scatter, width='stretch')
 else:
     st.warning("Données insuffisantes pour afficher le graphique de corrélation.")
 
