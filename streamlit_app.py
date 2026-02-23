@@ -6,11 +6,19 @@ st.set_page_config(page_title="Tableau de bord énergétique mondial", layout="w
 
 @st.cache_data
 def load_data():
+    url = "https://raw.githubusercontent.com/Arthemis-37/Manip-Data/refs/heads/main/World%20Energy%20Consumption.csv"
+    try:
+        df = pd.read_csv(url)
+    except:
+        df = pd.read_csv("Manip-Data\world_energy_consumption.csv")
 
-    df = pd.read_csv("world_energy_consumption.csv")
+    df_clean = df.dropna(subset=['iso_code']).copy()
     
-    df_clean = df.dropna(subset=['iso_code'])
-    
+    cols_to_fix = ['solar_consumption', 'renewables_consumption', 'primary_energy_consumption', 'co2']
+    for col in cols_to_fix:
+        if col in df_clean.columns:
+            df_clean[col] = df_clean[col].fillna(0)
+
     def solar_intensity(val):
         if val > 10: return "Producteur Majeur"
         elif val > 0: return "Producteur Mineur"
