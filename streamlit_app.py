@@ -44,7 +44,7 @@ st.markdown(f"Étude des données de **{year_range[0]}** à **{year_range[1]}**"
 st.subheader("Indicateurs Clés (KPIs)")
 
 total_cons = df_filtered['primary_energy_consumption'].sum()
-avg_co2 = df_filtered['co2'].mean()
+avg_co2 = df_filtered['greenhouse_gas_emissions'].mean()
 std_renew = df_filtered['renewables_consumption'].std()
 
 col1, col2, col3 = st.columns(3)
@@ -67,15 +67,21 @@ with col_right:
     st.write("### Distribution du CO2 par pays (Année max)")
     latest_year = df_filtered['year'].max()
     df_latest = df[df['year'] == latest_year]
-    fig_hist = px.histogram(df_latest, x='co2', nbins=50, 
+    fig_hist = px.histogram(df_latest, x='greenhouse_gas_emissions', nbins=50, 
                             title=f"Répartition mondiale du CO2 en {latest_year}")
     st.plotly_chart(fig_hist, use_container_width=True)
 
 st.write("### Corrélation PIB vs Énergie")
-fig_scatter = px.scatter(df_filtered, x='gdp', y='primary_energy_consumption', 
-                         size='co2', color='renewables_pct',
-                         hover_name='year', title="PIB vs Consommation (Taille = CO2)")
-st.plotly_chart(fig_scatter, use_container_width=True)
+# On supprime les lignes où les émissions de gaz à effet de serre sont manquantes pour éviter l'erreur de Plotly
+df_scatter = df_filtered.dropna(subset=['greenhouse_gas_emissions'])
+
+if not df_scatter.empty:
+    fig_scatter = px.scatter(df_scatter, x='gdp', y='primary_energy_consumption', 
+                             size='greenhouse_gas_emissions', color='renewables_pct',
+                             hover_name='year', title="PIB vs Consommation (Taille = Émissions GES)")
+    st.plotly_chart(fig_scatter, use_container_width=True)
+else:
+    st.warning("Données insuffisantes pour afficher le graphique de corrélation.")
 
 st.write("### Statut Solaire (Répartition des relevés)")
 st.table(df_filtered['solar_status'].value_counts())
