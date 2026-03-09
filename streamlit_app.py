@@ -137,19 +137,26 @@ else:
 st.write("### Répartition du statut solaire")
 solar_counts = df_filtered["solar_status"].value_counts().reset_index()
 solar_counts.columns = ["Statut", "Nombre d annees"]
-fig_pie = px.pie(
+solar_counts["Statut"] = pd.Categorical(solar_counts["Statut"], categories=["Non producteur", "Producteur Mineur", "Producteur Majeur"], ordered=True)
+solar_counts = solar_counts.sort_values("Statut")
+fig_bar = px.bar(
     solar_counts,
-    names="Statut",
-    values="Nombre d annees",
+    x="Nombre d annees",
+    y="Statut",
+    orientation="h",
     color="Statut",
+    text="Nombre d annees",
     color_discrete_map={
         "Producteur Majeur": "#0d6e6e",
         "Producteur Mineur": "#4db8b8",
         "Non producteur": "#d3d3d3"
-    }
+    },
+    labels={"Nombre d annees": "Nombre d annees", "Statut": ""},
+    title="Repartition du statut solaire"
 )
-fig_pie.update_traces(textposition="inside", textinfo="percent+label")
-st.plotly_chart(fig_pie, width="stretch")
+fig_bar.update_traces(textposition="outside")
+fig_bar.update_layout(showlegend=False, xaxis_title="Nombre d annees")
+st.plotly_chart(fig_bar, width="stretch")
 
 if st.checkbox("Afficher les données brutes"):
     st.dataframe(df_filtered)
